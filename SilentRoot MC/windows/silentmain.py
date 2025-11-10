@@ -174,7 +174,7 @@ class Capture:
                 if screen == "'2'": print(Fore.GREEN + f"[WEBHOOK] Sending to UNBANNED webhook" + Style.RESET_ALL)
             else:
                 # Normal webhook - Optional: Set to None or empty string to disable
-                webhook_url = 'None'
+                webhook_url = None
                 # To disable normal webhook, set: webhook_url = None
                 
                 if webhook_url:  # Only log if webhook is configured
