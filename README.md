@@ -331,7 +331,7 @@ results/
 
 <div align="center">
 
-**Made by Reaper**
+**Made by SilentRoot Team**
 
 </div>
 
