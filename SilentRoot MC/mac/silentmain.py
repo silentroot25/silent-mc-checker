@@ -1,7 +1,6 @@
 import requests, re, readchar, os, time, threading, random, urllib3, configparser, json, concurrent.futures, traceback, warnings, uuid, socket, socks, sys, string
 from datetime import datetime, timezone
 from colorama import Fore, Style, init
-from console import utils
 from tkinter import filedialog
 
 # macOS-specific terminal setup
