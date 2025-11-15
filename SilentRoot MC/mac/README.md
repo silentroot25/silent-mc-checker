@@ -146,7 +146,7 @@ Download from [python.org](https://python.org) and install
 
 ### Webhook Setup
 
-Edit `silentmain.py` around **lines 160-175**:
+Edit `silentmain.py` around **lines 177-188**:
 
 ```python
 # Banned Webhook (Red) - Hypixel OR DonutSMP bans
