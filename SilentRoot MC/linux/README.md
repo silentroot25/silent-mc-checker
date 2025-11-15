@@ -158,7 +158,7 @@ sudo pacman -S python python-pip
 
 ### Webhook Setup
 
-Edit `silentmain.py` around **lines 160-175**:
+Edit `silentmain.py` around **lines 177-188**:
 
 ```python
 # Banned Webhook (Red) - Hypixel OR DonutSMP bans
@@ -350,3 +350,4 @@ Need help? Have questions?
 **SilentRoot MC Checker** - The Ultimate Minecraft Account Checker
 
 </div>
+
