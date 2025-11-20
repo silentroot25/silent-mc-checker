@@ -6,7 +6,11 @@
 
 ![Python](https://img.shields.io/badge/python-3.8+-blue)
 ![Status](https://img.shields.io/badge/status-active-success)
-![License](https://img.shields.io/badge/license-MIT-blue)
+
+## INFO
+<img src="https://img.shields.io/github/downloads/silentroot25/silent-mc-checker/total?style=flat">
+<img src="https://img.shields.io/github/stars/silentroot25/silent-mc-checker?style=flat">
+<img src="https://img.shields.io/github/forks/silentroot25/silent-mc-checker?style=flat">
 
 **The Ultimate Minecraft Account Checker** with advanced ban detection, comprehensive statistics, and beautiful UI
 
