@@ -29,12 +29,6 @@
 - **Accurate Progress Bar** - Sub-character precision with smooth animations
 - **Smart ETA Calculation** - Weighted algorithm for precise time estimates
 
-### 🔍 **Improved Ban Detection**
-- **Separate Reason Field** - Hypixel ban reasons now display in dedicated field
-- **Enhanced Parsing** - Better extraction of temporary block reasons
-- **Version Detection** - Identifies incompatible Minecraft versions with suggestions
-- **Multi-Server Support** - Hypixel + DonutSMP ban checking
-
 ---
 
 ## ✨ Core Features
@@ -49,17 +43,15 @@
 
 ### 🎯 **Advanced Ban Detection**
 
-#### Hypixel Network
-- ✅ Multiple server/version combinations
+#### Hypixel Network 
 - ✅ Ban duration & ID tracking
-- ✅ Permanent & temporary ban detection
+- ✅ Permanent & temporary ban detection (may have issue)
 - ✅ Version compatibility checking
 
 #### DonutSMP Server
 - ✅ Real-time connection testing
 - ✅ Ban reason & duration extraction
 - ✅ Player statistics for unbanned accounts
-- ✅ Money, playtime, shards, level, rank
 - ✅ K/D ratio calculation
 
 ### 📊 **Statistics Collection**
@@ -95,16 +87,6 @@
 - **Payment Information** - Cards, PayPal, balance
 - **Cape Detection** - All cape types including Optifine
 - **Name Change Status** - Availability + last change date
-
-### 🌐 **Smart Webhook System**
-
-<div align="center">
-
-| Webhook Type | Trigger | Color |
-|-------------|---------|-------|
-| 🔴 **Banned** | Hypixel OR DonutSMP ban | Red |
-| 🟢 **Unbanned** | Clean accounts | Green |
-| 🟡 **Normal** | SFA/MFA/2FA/Other | Yellow |
 
 </div>
 
@@ -168,7 +150,6 @@ Follow the prompts:
 2. Select proxy type (1-5)
 3. Select screen mode (1-2)
 4. Choose combo file
-5. (Optional) Choose proxy file
 
 ---
 
@@ -180,13 +161,13 @@ Edit `silentmain.py` around **lines 160-175**:
 
 ```python
 # Banned Webhook (Red) - Hypixel OR DonutSMP bans
-webhook_url = 'https://discord.com/api/webhooks/YOUR_BANNED_WEBHOOK_HERE'
+webhook_url = 'YOUR_BANNED_WEBHOOK_HERE'
 
 # Unbanned Webhook (Green) - Clean accounts
-webhook_url = 'https://discord.com/api/webhooks/YOUR_UNBANNED_WEBHOOK_HERE'
+webhook_url = 'YOUR_UNBANNED_WEBHOOK_HERE'
 
 # Normal Webhook (Yellow) - SFA/MFA/2FA/Other
-webhook_url = 'https://discord.com/api/webhooks/YOUR_NORMAL_WEBHOOK_HERE or None'
+webhook_url = None
 ```
 
 ### Config.ini Settings
